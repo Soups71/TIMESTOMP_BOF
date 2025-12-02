@@ -1,0 +1,55 @@
+alias stomptime {
+	local('$barch $handle $data $type $source_file $target_file $timestamp $args');
+	
+	# figure out the arch of this session
+	$barch  = barch($1);
+	$bytes = 0;
+	# read in the right BOF file
+    $handle = openf(script_resource("stomptime. $+ $barch $+ .o"));
+	$data   = readb($handle, -1);
+	closef($handle);
+	if (size(@_) == 1)
+    {
+		berror($1, beacon_command_detail('stomptime'));
+		return;
+	}else if(size(@_) == 4){
+		if($2 eq 'COPY'){
+			$type = 1;
+			$target_file = $3;
+			$source_file = $4;
+			$timestamp = "";
+		}else if($2 eq "EDIT"){
+			$type = 2;
+			$source_file = "";
+			$target_file = $3;
+			$timestamp = $4;
+		}else{
+			berror($1, beacon_command_detail('stomptime'));
+			return;
+		}
+	}else{
+		berror($1, beacon_command_detail('stomptime'));
+		return;
+	}
+	$args   = bof_pack($1, "izzz", $type, $source_file, $target_file, $timestamp);
+	if($type == 1){
+		btask($1, "Attempting to COPY Timestamp from existing file!");
+	}else{
+		btask($1, "Attempting to EDIT Timestamp!");
+	}
+	
+	# execute it.
+	beacon_inline_execute($1, $data, "go", $args);
+}
+
+beacon_command_register(
+   "stomptime",
+   "Used to modify the timestamp of a file",
+   "
+   Command: stomptime
+   Summary: Modifies the timestamp of the target file.
+   Usage: 
+   1. stomptime COPY <Target File> <Source File> 
+   2. stomptime EDIT <Target File> <Timestamp (YYYY-MM-DDThh:mm:ss)>" 
+
+);
